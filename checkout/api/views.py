@@ -49,7 +49,7 @@ class OrderView(ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        queryset = Order.objects.filter(user=user)
+        queryset = Order.objects.prefetch_related('products__product', 'products__color', 'products__size').filter(user=user)
         
         return queryset 
     

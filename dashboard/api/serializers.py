@@ -1,8 +1,10 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import Prefetch
 from rest_framework import serializers
 from django.contrib.auth.models import Group
 from checkout.models import Order, OrderProduct
 from users.models import User
+from .utils import set_cache_if_exists
 from core.models import (
                             Advertisement,
                             Brand,
@@ -28,6 +30,10 @@ class SliderSerilaizer(serializers.ModelSerializer):
         model = Slider
         fields = '__all__'
 
+    def create(self, validated_data):
+        created = super().create(validated_data)
+        set_cache_if_exists('sliders_qs', Slider.objects.all())
+        return created
 
 class AdvertisementSerilaizer(serializers.ModelSerializer):
     class Meta:
@@ -46,6 +52,9 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = '__all__'
 
+    def create(self, validated_data):
+        created = super().create(validated_data)
+        set_cache_if_exists('categories_qs', qs=Category.objects.prefetch_related('subcategory').all())
 
 class SubCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -60,6 +69,7 @@ class BrandSerializer(serializers.ModelSerializer):
 
 
 class DiscountOfferSerializer(serializers.ModelSerializer):
+    active = serializers.BooleanField(default=True)
     class Meta:
         model = DiscountOffer
         fields = '__all__'
@@ -140,6 +150,12 @@ class ProductSerializer(serializers.ModelSerializer):
                 Image.objects.create(color=new_color, **image_data)
             for size_data in sizes_data:
                 Size.objects.create(color=new_color, **size_data)
+        
+        # cache
+        colors = Color.objects.prefetch_related('sizes', 'images')
+        _products = Product.objects.select_related('discount').prefetch_related(Prefetch('colors', queryset=colors), 'reviews')
+        set_cache_if_exists('products', add=1)
+        set_cache_if_exists('new_products_qs', qs=_products.order_by('-created_at')[:8])
 
         return product
 
@@ -236,7 +252,6 @@ class ProductSerializer(serializers.ModelSerializer):
 ###  
 
 
-
 class PartnerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Partner
@@ -278,17 +293,28 @@ class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'full_name', 'username', 'email', 'mobile', 'groups', 'password', 'is_staff']
-        extra_kwargs = {'is_staff': {'read_only':True}, 'password': {'write_only': True}, 'groups':{'read_only':True}}
+        extra_kwargs = {'is_staff': {'read_only':True}, 'password': {'write_only': True}}
         ordering = ['-id']
-        
+    
+    def validate(self, data):
+        groups_data = data.get('groups')
+        if groups_data:
+            for group in groups_data:
+                try:
+                    Group.objects.get(**group)
+                except Group.DoesNotExist:
+                    raise serializers.ValidationError({"groups": f"Invalid Group pk - object does not exist."})
+        return data 
+    
     def create(self, validated_data):
-        groups_data = validated_data.pop('groups')
+        groups_data = validated_data.pop('groups') 
         validated_data['is_staff'] = True
         validated_data['is_active'] = True
         staff_user = self.Meta.model.objects.create_staff(**validated_data)
-        for group in groups_data:
-            group_id = get_object_or_404(Group, **group)
-            staff_user.groups.add(group_id)
+        if groups_data:
+            for group in groups_data:
+                group_id = get_object_or_404(Group, **group)
+                staff_user.groups.add(group_id)
         return staff_user
     
     def update(self, instance, validated_data):
@@ -385,4 +411,18 @@ class OrderSerializer(serializers.ModelSerializer):
             'products':{'read_only':True},
             'ordered_date':{'read_only':True},
             }
+        
+    def update(self, instance, validated_data):
+        try:
+            if validated_data['status'] == 'accepted' and instance.status == (None or ""):
+                set_cache_if_exists('accepted_orders', add=1)
+            elif validated_data['status'] == 'rejected' and instance.status == (None or ""):
+                set_cache_if_exists('rejected_orders', add=1)
+            elif validated_data['status'] == 'inway' and instance.status == (None or ""):
+                set_cache_if_exists('inway_orders', add=1)
+            elif validated_data['status'] == 'delivered' and instance.status == (None or ""):
+                set_cache_if_exists('delivered_orders', add=1)
+        except KeyError:
+            pass
+        return super().update(instance, validated_data)
         

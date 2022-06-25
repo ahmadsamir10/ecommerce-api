@@ -59,11 +59,34 @@ INSTALLED_APPS = [
     #DRF
     'rest_framework.authtoken',
     'django_filters',
+    
+    # Django Debug toolbar
+    "debug_toolbar",
 
     #django_cleanup (keep at bottom)
     'django_cleanup.apps.CleanupConfig',
+    
+    'django_extensions',
+    
+    
 
 ]
+
+INTERNAL_IPS = [
+    # ...
+    "127.0.0.1",
+    # ...
+]
+
+# django redis 
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+    }
+}
+
 
 
 # DRF settings 
@@ -86,6 +109,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 
 ]
 
@@ -184,3 +208,24 @@ EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = '' 
 
 
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+    },
+}

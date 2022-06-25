@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from checkout.models import Order, OrderProduct
 from core.models import DiscountCoupon
+from dashboard.api.utils import set_cache_if_exists
 
 
 
@@ -121,6 +122,7 @@ class OrderSerializer(serializers.ModelSerializer):
         # if the cart is empty .. raise validation error
         else:
             raise serializers.ValidationError({"products": ["there is no Products in your cart"]})
+        
     # OVERRIDING UPDATE METHOD TO CHECKOUT OR CANCEL ORDERS   
     def update(self, instance, validated_data):
         if instance.ordered == True:
@@ -130,6 +132,8 @@ class OrderSerializer(serializers.ModelSerializer):
                     for orderproduct in instance.products.all():
                         orderproduct.canceled = True
                         orderproduct.save()
+                    set_cache_if_exists('pending_orders', remove=1)
+                    set_cache_if_exists('canceled_orders', add=1)
                 elif validated_data.get('canceled') == None:
                     pass
                 else:
@@ -155,4 +159,6 @@ class OrderSerializer(serializers.ModelSerializer):
             if validated_data.get('ordered') == False:
                 raise serializers.ValidationError({"ordered": "Already not ordered."})
              
-        return super().update(instance, validated_data)
+        update = super().update(instance, validated_data)
+        set_cache_if_exists('pending_orders', add=1)
+        return update

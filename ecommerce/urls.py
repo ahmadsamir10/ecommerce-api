@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/users/', include('users.api.urls')),
     path('api/activate-account/<token>', ActivateAccountView.as_view(), name='activate'),
     path('api/checkout/', include('checkout.api.urls')),
+    path('__debug__/', include('debug_toolbar.urls')),
     
     
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

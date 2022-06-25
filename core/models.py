@@ -25,8 +25,8 @@ class SubCategory(models.Model):
     image = models.ImageField(upload_to='subcategory_images/', null=True, blank=True)
     creation_date = models.DateField(auto_now_add=True)
     
-    def __str__(self):
-        return f'{self.subcategory_english_name} -> {self.category} '
+    # def __str__(self):
+    #     return f'{self.subcategory_english_name} -> {self.category} '
 
 
 class Brand(models.Model):

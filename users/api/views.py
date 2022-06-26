@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from users.models import User, Wishlist, Activation
+from dashboard.api.utils import set_cache_if_exists
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import get_template
@@ -58,8 +59,10 @@ class RegisterView(CreateAPIView):
         msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
         msg.attach_alternative(html_content, "text/html")
         msg.send()
-        
+        set_cache_if_exists('inactive_users', add=1)
+        set_cache_if_exists('users', add=1)
         response = {'created' : 'Your account created successfully .. check mail inbox to activate it'}
+        
         return Response(response, status=status.HTTP_201_CREATED, headers=headers)
 
 
@@ -95,6 +98,8 @@ class ActivateAccountView(APIView):
             activation.delete()
             
             data={'activated':True, 'token':token}
+            set_cache_if_exists('inactive_users', remove=1)
+            set_cache_if_exists('active_users', add=1)
             return Response(data)
         else:
             data={'activated':False, 'status':'invalid token'}

@@ -80,6 +80,17 @@ class UsersView(ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsStaffOrNotAllowed, DjangoModelPermissions]
     
+    def create(self, request, *args, **kwargs):
+        created = super().create(request, *args, **kwargs)
+        set_cache_if_exists(key='active_users', add=1)
+        set_cache_if_exists(key='users', add=1)
+        return created
+    
+    def destroy(self, request, *args, **kwargs):
+        destroyed = super().destroy(request, *args, **kwargs)
+        set_cache_if_exists(key='active_users', remove=1)
+        set_cache_if_exists(key='users', remove=1)
+        return destroyed
 
 
 
@@ -130,6 +141,18 @@ class SliderView(ModelViewSet):
     serializer_class = SliderSerilaizer
     permission_classes = [IsAuthenticated, IsStaffOrNotAllowed, DjangoModelPermissions]
     
+    def create(self, request, *args, **kwargs):
+        created = super().create(request, *args, **kwargs)
+        set_cache_if_exists(key='sliders', add=1)
+        return created
+        
+    
+    def destroy(self, request, *args, **kwargs):
+        destroyed = super().destroy(request, *args, **kwargs)
+        set_cache_if_exists(key='sliders', remove=1)
+        return destroyed
+    
+    
 # crud view for ads
 class AdvertisementView(ModelViewSet):
     queryset = Advertisement.objects.all()
@@ -146,6 +169,18 @@ class CategoryView(ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated, IsStaffOrNotAllowed, DjangoModelPermissions]
+    
+    def create(self, request, *args, **kwargs):
+        created = super().create(request, *args, **kwargs)
+        set_cache_if_exists(key='categories', add=1)
+        return created
+        
+    
+    def destroy(self, request, *args, **kwargs):
+        destroyed = super().destroy(request, *args, **kwargs)
+        set_cache_if_exists(key='categories', remove=1)
+        return destroyed
+
 
 class SubCategoryView(ModelViewSet):
     queryset = SubCategory.objects.all()
@@ -156,7 +191,19 @@ class BrandView(ModelViewSet):
     queryset = Brand.objects.all()
     serializer_class = BrandSerializer
     permission_classes = [IsAuthenticated, IsStaffOrNotAllowed, DjangoModelPermissions]
-       
+    
+    def create(self, request, *args, **kwargs):
+        created = super().create(request, *args, **kwargs)
+        set_cache_if_exists(key='brands', add=1)
+        return created
+        
+    
+    def destroy(self, request, *args, **kwargs):
+        destroyed = super().destroy(request, *args, **kwargs)
+        set_cache_if_exists(key='brands', remove=1)
+        return destroyed   
+    
+    
 class DiscountOfferView(ModelViewSet):
     queryset = DiscountOffer.objects.all()
     serializer_class = DiscountOfferSerializer
